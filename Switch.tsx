@@ -2,6 +2,11 @@ import React, { PropsWithChildren, useEffect, useRef } from "react";
 import { StyleSheet, Animated, View, Dimensions, Easing } from "react-native";
 import Svg, { Circle, Rect, Path } from "react-native-svg";
 import Cloud from "./Cloud";
+import {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from "react-native-reanimated";
 
 const Switch: React.FC<
   PropsWithChildren<{
@@ -13,12 +18,11 @@ const Switch: React.FC<
   const animation = useRef(new Animated.Value(value ? 1 : 0)).current;
 
   const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+  const AnimatedPath = Animated.createAnimatedComponent(Path);
 
   const borderWidth = 4,
     handlePadding = 2,
-    handleDiameter = height - (borderWidth + handlePadding) * 2,
-    radius = height / 2,
-    halfBorderWidth = borderWidth / 2;
+    handleDiameter = height - (borderWidth + handlePadding) * 2;
 
   useEffect(() => {
     Animated.timing(animation, {
@@ -29,25 +33,83 @@ const Switch: React.FC<
     // TODO: give user haptic feeback when switching
   }, [value]);
 
+  const halfBorderWidth = borderWidth / 2;
+  const radius = height / 2;
+  const pathRadius = (height - borderWidth) / 2;
+
+  const path = `M${halfBorderWidth},${pathRadius}
+  A ${pathRadius} ${pathRadius} 0 0 1 ${radius} ${halfBorderWidth}
+  h${width - height}
+  A ${pathRadius} ${pathRadius} 0 0 1 ${width - halfBorderWidth} ${pathRadius}
+  A ${pathRadius} ${pathRadius} 0 0 1 ${width - radius} ${radius + pathRadius}
+  h-${width - height}
+  A ${pathRadius} ${pathRadius} 0 0 1 ${halfBorderWidth} ${pathRadius}`;
+
+  const getPathLength = () => {
+    const pathElement = document.createElementNS(
+      "http://www.w3.org/2000/svg",
+      "path"
+    );
+    pathElement.setAttribute("d", path);
+
+    return pathElement.getTotalLength();
+  };
+  const pathLength = getPathLength();
+
   return (
-    <View>
+    <View style={{ flex: 1 }}>
       <Animated.View
         style={[
           {
-            height: height,
             width: width,
-            borderWidth: borderWidth,
+            height: height,
             borderRadius: height / 2,
-            padding: handlePadding,
+            borderWidth: borderWidth,
+            borderColor: "transparent",
           },
           {
             backgroundColor: animation.interpolate({
               inputRange: [0, 1],
               outputRange: ["#3d4147", "#82cbff"],
             }),
-            borderColor: "red", //value ? "#4ab4ff" : "#000",
+            borderColor: "transparent",
           },
         ]}
+      ></Animated.View>
+      <Animated.View
+        style={{
+          position: "absolute",
+          height: height - borderWidth,
+          width: width - borderWidth,
+          padding: borderWidth,
+          opacity: !value
+            ? animation.interpolate({
+                inputRange: [0, 0.75, 1],
+                outputRange: [1, 0, 0],
+              })
+            : animation.interpolate({
+                inputRange: [0, 0.55, 0.6],
+                outputRange: [1, 1, 0],
+              }),
+        }}
+      >
+        <Svg height="100%" width="100%" viewBox="0 0 100 100">
+          <Circle cx="130" cy="10" r="6" fill="white" />
+          <Circle cx="140" cy="80" r="6" fill="white" />
+          <Circle cx="145" cy="40" r="7" fill="white" />
+          <Circle cx="96" cy="65" r="4" fill="white" />
+          <Circle cx="80" cy="35" r="4" fill="white" />
+          <Circle cx="40" cy="14" r="6" fill="white" />
+          <Circle cx="45" cy="87" r="7" fill="white" />
+        </Svg>
+      </Animated.View>
+      <View
+        style={{
+          position: "absolute",
+          width: width,
+          height: height,
+          padding: handlePadding + borderWidth,
+        }}
       >
         <Animated.View
           style={[
@@ -119,10 +181,10 @@ const Switch: React.FC<
         <Animated.View
           style={{
             position: "absolute",
-            height: height * 0.46,
+            height: height * 0.66,
             width: height * 0.7,
-            bottom: height * 0.1,
-            right: height * 0.6,
+            bottom: height * 0,
+            right: height * 0.55,
             opacity: value
               ? 1
               : animation.interpolate({
@@ -150,7 +212,7 @@ const Switch: React.FC<
         >
           <Cloud strokeWidth={borderWidth} />
         </Animated.View>
-      </Animated.View>
+      </View>
       <Animated.View
         style={{
           height: height,
@@ -162,19 +224,24 @@ const Switch: React.FC<
           style={{ position: "absolute" }}
           height={height}
           width={width}
-          viewBox={`0 0 85 40`}
+          viewBox={`0 0 ${width} ${height}`}
         >
           <Path
-            strokeWidth={2}
-            stroke="#eeeeee"
+            strokeWidth={borderWidth}
+            stroke={!value ? "#4ab4ff" : "#000"}
             fill="transparent"
-            d={`M1,19
-            A 19 19 0 0 1 20 1
-            h45
-            A 19 19 0 0 1 84 19
-            A 19 19 0 0 1 65 39
-            h-45
-            A 19 19 0 0 1 1 19`}
+            d={path}
+          />
+          <AnimatedPath
+            strokeWidth={borderWidth}
+            stroke={value ? "#4ab4ff" : "#000"}
+            fill="transparent"
+            d={path}
+            strokeDasharray={[pathLength]}
+            strokeDashoffset={animation.interpolate({
+              inputRange: [0, 1],
+              outputRange: [value ? pathLength : 0, value ? 0 : pathLength],
+            })}
           />
         </Svg>
       </Animated.View>
