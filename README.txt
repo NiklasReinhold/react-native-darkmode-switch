@@ -2,7 +2,7 @@
 
 I tried to animated the most beautiful darkmode switch:
 
-![Watch my showcase](https://github.com/NiklasReinhold/react-native-darkmode-switch/tree/main/screenshots/showcase.gif)
+![Watch my showcase](https://raw.githubusercontent.com/NiklasReinhold/react-native-darkmode-switch/main/screenshots/showcase.gif)
 
 ## Usage/Examples
 
