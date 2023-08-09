@@ -8,7 +8,6 @@ import {
   View,
 } from "react-native";
 import Switch from "./Switch";
-import Cloud from "./Cloud";
 
 export default function App() {
   const [pressed, setPressed] = React.useState(false);
@@ -19,7 +18,7 @@ export default function App() {
         style={styles.switch_container}
         onPress={() => setPressed(!pressed)}
       >
-        <Switch value={pressed} borderWidth={5} />
+        <Switch value={pressed} borderWidth={6} handlePadding={3} />
       </TouchableOpacity>
     </View>
   );
@@ -32,7 +31,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   switch_container: {
-    width: 280,
-    height: 130,
+    width: 250,
+    height: 140,
   },
 });
