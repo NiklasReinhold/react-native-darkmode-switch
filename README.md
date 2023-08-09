@@ -31,4 +31,4 @@ export default function App() {
 }
 ```
 
-Have fun with it and give the customers a fancier night experience!
+Have fun with it and give the users a fancier night experience!
