@@ -19,7 +19,6 @@
     "react-native": "0.72.3",
     "react-native-reanimated": "~3.3.0",
     "react-native-svg": "^13.11.0",
-    "react-native-svg-transformer": "^1.1.0",
     "react-native-web": "~0.19.6",
     "svg-path-properties": "^1.2.0",
     "typescript": "^5.1.6"

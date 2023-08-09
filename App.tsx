@@ -1,12 +1,5 @@
 import React from "react";
-import {
-  Button,
-  StyleSheet,
-  Text,
-  Touchable,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { StyleSheet, TouchableOpacity, View } from "react-native";
 import Switch from "./Switch";
 
 export default function App() {
@@ -31,7 +24,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   switch_container: {
-    width: 250,
-    height: 140,
+    width: 170 * 2,
+    height: 80 * 2,
   },
 });
