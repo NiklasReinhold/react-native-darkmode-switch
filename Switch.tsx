@@ -7,29 +7,32 @@ import {
   useSharedValue,
   withSpring,
 } from "react-native-reanimated";
+import { svgPathProperties } from "svg-path-properties";
 
 const Switch: React.FC<
   PropsWithChildren<{
     value: boolean;
+    handlePadding?: number;
+    borderWidth?: number;
   }>
-> = ({ value }) => {
+> = ({ value, handlePadding = 2, borderWidth = 4 }) => {
   const animation = useRef(new Animated.Value(value ? 1 : 0)).current;
-
-  const [height, setHeight] = React.useState(10);
-  const [width, setWidth] = React.useState(20);
-
-  const onLayout = (event) => {
-    const layout = event.nativeEvent.layout;
-    setHeight(layout.height);
-    setWidth(layout.width);
-  };
 
   const AnimatedCircle = Animated.createAnimatedComponent(Circle);
   const AnimatedPath = Animated.createAnimatedComponent(Path);
+  const AnimatedSvg = Animated.createAnimatedComponent(Svg);
 
-  const borderWidth = 4,
-    handlePadding = 2,
-    handleDiameter = height - (borderWidth + handlePadding) * 2;
+  const [dimensions, setDimensions] = React.useState<{
+    height: number;
+    width: number;
+  }>({ width: 20, height: 10 });
+
+  const handleDiameter = dimensions.height - (borderWidth + handlePadding) * 2;
+  const [path, pathLength] = getBorderPath(
+    dimensions.height,
+    dimensions.width,
+    borderWidth
+  );
 
   useEffect(() => {
     Animated.timing(animation, {
@@ -37,231 +40,201 @@ const Switch: React.FC<
       duration: 1000,
       useNativeDriver: true,
     }).start();
-    // TODO: give user haptic feeback when switching
   }, [value]);
 
-  const halfBorderWidth = borderWidth / 2;
-  const radius = height / 2;
-  const pathRadius = (height - borderWidth) / 2;
-
-  const path = `M${halfBorderWidth},${pathRadius}
-  A ${pathRadius} ${pathRadius} 0 0 1 ${radius} ${halfBorderWidth}
-  h${width - height}
-  A ${pathRadius} ${pathRadius} 0 0 1 ${width - halfBorderWidth} ${pathRadius}
-  A ${pathRadius} ${pathRadius} 0 0 1 ${width - radius} ${radius + pathRadius}
-  h-${width - height}
-  A ${pathRadius} ${pathRadius} 0 0 1 ${halfBorderWidth} ${pathRadius}`;
-
-  const getPathLength = () => {
-    const pathElement = document.createElementNS(
-      "http://www.w3.org/2000/svg",
-      "path"
-    );
-    pathElement.setAttribute("d", path);
-
-    return pathElement.getTotalLength();
-  };
-  const pathLength = getPathLength();
-
   return (
-    <View style={{ flex: 1, backgroundColor: "red" }} onLayout={onLayout}>
+    <View
+      style={{
+        flex: 1,
+      }}
+      onLayout={(event) => setDimensions(event.nativeEvent.layout)}
+    >
+      <Svg viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}>
+        <AnimatedPath
+          strokeWidth={borderWidth}
+          stroke={!value ? "#4ab4ff" : "#000"}
+          fill={animation.interpolate({
+            inputRange: [0, 1],
+            outputRange: ["#3d4147", "#82cbff"],
+          })}
+          d={path}
+        />
+        <AnimatedPath
+          strokeWidth={borderWidth}
+          stroke={value ? "#4ab4ff" : "#000"}
+          fill="transparent"
+          d={path}
+          strokeDasharray={[pathLength]}
+          strokeDashoffset={animation.interpolate({
+            inputRange: [0, 1],
+            outputRange: value ? [pathLength, 0] : [0, pathLength],
+          })}
+        />
+      </Svg>
+      <AnimatedSvg
+        style={{
+          position: "absolute",
+          opacity: animation.interpolate({
+            inputRange: value ? [0, 0.4, 0.5] : [0, 0.75, 1],
+            outputRange: value ? [1, 1, 0] : [1, 0, 0],
+          }),
+        }}
+        viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
+      >
+        <Circle cx="80%" cy="13%" r="3%" fill="white" />
+        <Circle cx="84%" cy="73%" r="3%" fill="white" />
+        <Circle cx="87%" cy="37%" r="4%" fill="white" />
+        <Circle cx="44%" cy="14%" r="3%" fill="white" />
+        <Circle cx="57%" cy="35%" r="2%" fill="white" />
+        <Circle cx="64%" cy="59%" r="2%" fill="white" />
+        <Circle cx="47%" cy="78%" r="3.5%" fill="white" />
+      </AnimatedSvg>
       <Animated.View
         style={[
           {
-            width: width,
-            height: height,
-            borderRadius: height / 2,
-            borderWidth: borderWidth,
-            borderColor: "transparent",
-          },
-          {
-            backgroundColor: animation.interpolate({
-              inputRange: [0, 1],
-              outputRange: ["#3d4147", "#82cbff"],
+            position: "absolute",
+            height: handleDiameter,
+            width: animation.interpolate({
+              inputRange: [0, 0.5, 1],
+              outputRange: [
+                handleDiameter,
+                handleDiameter * 1.5,
+                handleDiameter * 1,
+              ],
             }),
-            borderColor: "transparent",
+            borderRadius: handleDiameter / 2,
+            margin: borderWidth + handlePadding,
+            transform: [
+              {
+                translateX: animation.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [
+                    0,
+                    dimensions.width -
+                      handleDiameter -
+                      borderWidth * 2 -
+                      handlePadding * 2,
+                  ],
+                }),
+              },
+            ],
+            backgroundColor: value ? "#ff9f0f" : "#ffff80",
           },
         ]}
-      ></Animated.View>
-      <Animated.View
-        style={{
-          position: "absolute",
-          height: height - borderWidth,
-          width: width - borderWidth,
-          padding: borderWidth,
-          opacity: !value
-            ? animation.interpolate({
-                inputRange: [0, 0.75, 1],
-                outputRange: [1, 0, 0],
-              })
-            : animation.interpolate({
-                inputRange: [0, 0.55, 0.6],
-                outputRange: [1, 1, 0],
-              }),
-        }}
-      >
-        <Svg height="100%" width="100%" viewBox="0 0 100 100">
-          <Circle cx="130" cy="10" r="6" fill="white" />
-          <Circle cx="140" cy="80" r="6" fill="white" />
-          <Circle cx="145" cy="40" r="7" fill="white" />
-          <Circle cx="96" cy="65" r="4" fill="white" />
-          <Circle cx="80" cy="35" r="4" fill="white" />
-          <Circle cx="40" cy="14" r="6" fill="white" />
-          <Circle cx="45" cy="87" r="7" fill="white" />
-        </Svg>
-      </Animated.View>
-      <View
-        style={{
-          position: "absolute",
-          width: width,
-          height: height,
-          padding: handlePadding + borderWidth,
-        }}
       >
         <Animated.View
           style={[
             {
-              height: handleDiameter,
-              width: animation.interpolate({
-                inputRange: [0, 0.5, 1],
-                outputRange: [
-                  handleDiameter,
-                  handleDiameter * 1.5,
-                  handleDiameter * 1,
-                ],
-              }),
-              borderRadius: handleDiameter / 2,
-              padding: borderWidth,
-              transform: [
-                {
-                  translateX: animation.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [
-                      0,
-                      width -
-                        handleDiameter -
-                        borderWidth * 2 -
-                        handlePadding * 2,
-                    ],
-                  }),
-                },
-              ],
-              backgroundColor: value ? "#ff9f0f" : "#ffff80",
+              height: handleDiameter - borderWidth * 2,
+              width: handleDiameter - borderWidth * 2,
+              borderRadius: (handleDiameter - borderWidth * 2) / 2,
+              alignSelf: value ? "flex-end" : "flex-start",
+              backgroundColor: value ? "#ffbb54" : "#ffffde",
+              margin: borderWidth,
             },
           ]}
         >
-          <Animated.View
-            style={[
-              {
-                height: handleDiameter - borderWidth * 2,
-                width: handleDiameter - borderWidth * 2,
-                borderRadius: (handleDiameter - borderWidth * 2) / 2,
-                alignSelf: value ? "flex-end" : "flex-start",
-                backgroundColor: value ? "#ffbb54" : "#ffffde",
-              },
-            ]}
+          <Svg
+            viewBox={`0 0 ${handleDiameter - borderWidth * 2} ${
+              handleDiameter - borderWidth * 2
+            }`}
           >
-            <Svg height="100%" width="100%" viewBox="0 0 100 100">
-              <AnimatedCircle
-                cx="19"
-                cy="19"
-                r="12"
-                fill={value ? "transparent" : "#ffff80"}
-              />
-              <AnimatedCircle
-                cx="60"
-                cy="77"
-                r="12"
-                fill={value ? "transparent" : "#ffff80"}
-              />
-              <AnimatedCircle
-                cx="73"
-                cy="17"
-                r="11"
-                stroke={value ? "transparent" : "#ffff80"}
-                strokeWidth="9"
-                fill="transparent"
-              />
-            </Svg>
-          </Animated.View>
+            <AnimatedCircle
+              cx="19.5%"
+              cy="19.7%"
+              r="12%"
+              fill={value ? "transparent" : "#ffff80"}
+            />
+            <AnimatedCircle
+              cx="60%"
+              cy="77%"
+              r="12%"
+              fill={value ? "transparent" : "#ffff80"}
+            />
+            <AnimatedCircle
+              cx="71.3%"
+              cy="17%"
+              r="11%"
+              stroke={value ? "transparent" : "#ffff80"}
+              strokeWidth="9%"
+              fill="transparent"
+            />
+          </Svg>
         </Animated.View>
-        <Animated.View
-          style={{
-            position: "absolute",
-            height: height * 0.66,
-            width: height * 0.7,
-            bottom: height * 0,
-            right: height * 0.55,
-            opacity: value
-              ? 1
-              : animation.interpolate({
-                  inputRange: [0, 0.8, 1],
-                  outputRange: [0, 0, 1],
-                }),
-            transform: [
-              {
-                scaleX: -1,
-              },
-              {
-                scale: value
-                  ? animation.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0, 1],
-                      easing: Easing.elastic(1.4),
-                    })
-                  : animation.interpolate({
-                      inputRange: [0, 0.8, 1],
-                      outputRange: [0, 0, 1],
-                    }),
-              },
-            ],
-          }}
-        >
-          <Cloud strokeWidth={borderWidth} />
-        </Animated.View>
-      </View>
+      </Animated.View>
       <Animated.View
         style={{
-          height: height,
-          width: width,
           position: "absolute",
+          bottom: borderWidth * 2,
+          right: handleDiameter * 0.53 + handlePadding + borderWidth,
+          height: dimensions.height * 0.48,
+          width: dimensions.height * 0.48 * (1706 / 1096),
+          backgroundColor: "red",
+          opacity: value
+            ? 1
+            : animation.interpolate({
+                inputRange: [0, 0.8, 1],
+                outputRange: [0, 0, 1],
+              }),
+          transform: [
+            {
+              scale: value
+                ? animation.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0, 1],
+                    easing: Easing.elastic(1.4),
+                  })
+                : animation.interpolate({
+                    inputRange: [0, 0.8, 1],
+                    outputRange: [0, 0, 1],
+                  }),
+            },
+          ],
         }}
       >
         <Svg
-          style={{ position: "absolute" }}
-          height={height}
-          width={width}
-          viewBox={`0 0 ${width} ${height}`}
+          style={{
+            transform: [{ scaleX: -1 }],
+            backgroundColor: "green",
+          }}
+          viewBox={`0 0 1706 1096`}
         >
           <Path
-            strokeWidth={borderWidth}
-            stroke={!value ? "#4ab4ff" : "#000"}
-            fill="transparent"
-            d={path}
-          />
-          <AnimatedPath
-            strokeWidth={borderWidth}
-            stroke={value ? "#4ab4ff" : "#000"}
-            fill="transparent"
-            d={path}
-            strokeDasharray={[pathLength]}
-            strokeDashoffset={animation.interpolate({
-              inputRange: [0, 1],
-              outputRange: [value ? pathLength : 0, value ? 0 : pathLength],
-            })}
+            fill="white"
+            stroke="#ffd6fe"
+            strokeWidth={(1096 / dimensions.height) * borderWidth}
+            d="M 948.539062 2 C 884.070312 9.460938 825.195312 31.453125 773.378906 67.832031 C 741.675781 89.957031 709.972656 120.742188 688.527344 150.195312 C 685.464844 154.457031 682.664062 158.191406 682.53125 158.457031 C 682.265625 158.722656 677.203125 157.390625 671.34375 155.390625 C 655.757812 150.328125 636.710938 145.664062 620.0625 143.128906 C 600.078125 140.066406 561.183594 140.066406 541.46875 143.128906 C 460.082031 155.65625 391.351562 199.503906 345.929688 267.601562 C 314.625 314.648438 297.710938 375.417969 300.105469 431.390625 L 300.90625 448.980469 L 296.644531 449.648438 C 294.246094 450.046875 287.054688 450.980469 280.390625 451.78125 C 225.378906 458.445312 165.703125 484.03125 120.414062 520.414062 C 62.605469 566.925781 22.113281 633.160156 6.925781 706.324219 C 1.863281 730.710938 0.664062 742.570312 0.800781 772.289062 C 0.800781 804.675781 2.664062 821.332031 9.191406 848.386719 C 38.628906 968.195312 133.867188 1061.484375 253.617188 1087.472656 C 289.316406 1095.199219 253.351562 1094.800781 831.1875 1094.800781 C 1338.160156 1094.800781 1365.464844 1094.667969 1380.648438 1092.402344 C 1467.097656 1079.476562 1540.09375 1042.691406 1598.4375 982.589844 C 1617.351562 963.265625 1627.34375 951.003906 1641.59375 929.8125 C 1672.632812 883.703125 1692.34375 832.792969 1701.269531 774.957031 C 1703.667969 759.496094 1704.199219 750.566406 1704.199219 722.316406 C 1704.199219 684.734375 1702.070312 666.34375 1694.34375 634.757812 C 1670.367188 536.40625 1608.695312 453.113281 1521.445312 401.269531 C 1477.089844 374.882812 1426.207031 357.824219 1374.390625 351.828125 C 1358.804688 349.964844 1358.671875 349.964844 1358.671875 339.96875 C 1358.671875 327.308594 1350.8125 286.261719 1344.417969 265.871094 C 1334.429688 233.488281 1317.113281 196.039062 1300.328125 170.582031 C 1240.121094 79.027344 1148.476562 20.125 1040.984375 4 C 1016.339844 0.265625 971.71875 -0.667969 948.539062 2 Z M 948.539062 2 "
           />
         </Svg>
       </Animated.View>
     </View>
   );
 };
-/*
-M${height / 2} 0 h${width - height} a ${height / 2} ${
-              height / 2
-            } 0 0 1 0 ${height} h-${width} a ${height} ${height} 0 0 1 0 -${
-              height * 2
-            }
-*/
+
+const getBorderPath = (
+  height: number,
+  width: number,
+  borderWidth: number
+): [string, number] => {
+  const halfBorderWidth = borderWidth / 2;
+  const radius = height / 2;
+  const pathRadius = (height - borderWidth) / 2;
+
+  const path = `M${halfBorderWidth},${pathRadius}
+    A ${pathRadius} ${pathRadius} 0 0 1 ${radius} ${halfBorderWidth}
+    h${width - height}
+    A ${pathRadius} ${pathRadius} 0 0 1 ${width - halfBorderWidth} ${pathRadius}
+    A ${pathRadius} ${pathRadius} 0 0 1 ${width - radius} ${radius + pathRadius}
+    h-${width - height}
+    A ${pathRadius} ${pathRadius} 0 0 1 ${halfBorderWidth} ${pathRadius}`;
+
+  const properties = new svgPathProperties(path);
+  const length = properties.getTotalLength();
+  return [path, length];
+};
+
+const getPathOfCloud = () =>
+  "M712.1 1.5c-48.4 5.6-92.6 22.1-131.5 49.4-23.8 16.6-47.6 39.7-63.7 61.8-2.3 3.2-4.4 6-4.5 6.2-.2.2-4-.8-8.4-2.3-11.7-3.8-26-7.3-38.5-9.2-15-2.3-44.2-2.3-59 0-61.1 9.4-112.7 42.3-146.8 93.4-23.5 35.3-36.2 80.9-34.4 122.9l.6 13.2-3.2.5c-1.8.3-7.2 1-12.2 1.6-41.3 5-86.1 24.2-120.1 51.5C47 425.4 16.6 475.1 5.2 530 1.4 548.3.5 557.2.6 579.5c0 24.3 1.4 36.8 6.3 57.1C29 726.5 100.5 796.5 190.4 816c26.8 5.8-.2 5.5 433.6 5.5 380.6 0 401.1-.1 412.5-1.8 64.9-9.7 119.7-37.3 163.5-82.4 14.2-14.5 21.7-23.7 32.4-39.6 23.3-34.6 38.1-72.8 44.8-116.2 1.8-11.6 2.2-18.3 2.2-39.5 0-28.2-1.6-42-7.4-65.7-18-73.8-64.3-136.3-129.8-175.2-33.3-19.8-71.5-32.6-110.4-37.1-11.7-1.4-11.8-1.4-11.8-8.9 0-9.5-5.9-40.3-10.7-55.6-7.5-24.3-20.5-52.4-33.1-71.5C931 59.3 862.2 15.1 781.5 3c-18.5-2.8-52-3.5-69.4-1.5z";
 
 const styles = StyleSheet.create({});
 
