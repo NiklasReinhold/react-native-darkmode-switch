@@ -19,11 +19,7 @@ export default function App() {
         style={styles.switch_container}
         onPress={() => setPressed(!pressed)}
       >
-        <Switch
-          value={pressed}
-          width={styles.switch_container.width}
-          height={styles.switch_container.height}
-        />
+        <Switch value={pressed} />
       </TouchableOpacity>
     </View>
   );
@@ -34,13 +30,9 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "white",
   },
   switch_container: {
     width: 170,
     height: 80,
-    backgroundColor: "white",
-    justifyContent: "center",
-    alignItems: "center",
   },
 });

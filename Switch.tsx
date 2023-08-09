@@ -11,11 +11,18 @@ import {
 const Switch: React.FC<
   PropsWithChildren<{
     value: boolean;
-    height: number;
-    width: number;
   }>
-> = ({ value, height, width }) => {
+> = ({ value }) => {
   const animation = useRef(new Animated.Value(value ? 1 : 0)).current;
+
+  const [height, setHeight] = React.useState(10);
+  const [width, setWidth] = React.useState(20);
+
+  const onLayout = (event) => {
+    const layout = event.nativeEvent.layout;
+    setHeight(layout.height);
+    setWidth(layout.width);
+  };
 
   const AnimatedCircle = Animated.createAnimatedComponent(Circle);
   const AnimatedPath = Animated.createAnimatedComponent(Path);
@@ -57,7 +64,7 @@ const Switch: React.FC<
   const pathLength = getPathLength();
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: "red" }} onLayout={onLayout}>
       <Animated.View
         style={[
           {
