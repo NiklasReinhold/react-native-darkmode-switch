@@ -22,7 +22,7 @@ export default function App() {
 
   return (
     <TouchableOpacity
-      style={{ width: 170, height: 180 }}
+      style={{ width: 170, height: 80 }}
       onPress={() => setPressed(!pressed)}
     >
       <Switch value={pressed} borderWidth={6} handlePadding={3} />
