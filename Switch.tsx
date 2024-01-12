@@ -1,15 +1,13 @@
-import React, { PropsWithChildren, useEffect, useRef } from "react";
-import { StyleSheet, View, Easing } from "react-native";
+import React, { PropsWithChildren, useEffect } from "react";
+import { StyleSheet, View } from "react-native";
 import Svg, { Circle, Path } from "react-native-svg";
 import { svgPathProperties } from "svg-path-properties";
 import Animated, {
-  Extrapolation,
   interpolate,
   interpolateColor,
   useAnimatedProps,
   useAnimatedStyle,
   useSharedValue,
-  withSpring,
   withTiming,
 } from "react-native-reanimated";
 
