@@ -6,12 +6,19 @@ export default function App() {
   const [pressed, setPressed] = React.useState(false);
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[
+        styles.container,
+        {
+          backgroundColor: !pressed ? "#000" : "#fff",
+        },
+      ]}
+    >
       <TouchableOpacity
         style={styles.switch_container}
         onPress={() => setPressed(!pressed)}
       >
-        <Switch value={pressed} borderWidth={6} handlePadding={3} />
+        <Switch value={pressed} borderWidth={4} handlePadding={2} />
       </TouchableOpacity>
     </View>
   );
@@ -24,7 +31,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   switch_container: {
-    width: 170 * 2,
-    height: 80 * 2,
+    width: 170,
+    height: 80,
   },
 });
