@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
 import Switch from "./Switch";
+import { StatusBar } from "expo-status-bar";
 
 export default function App() {
   const [pressed, setPressed] = React.useState(false);
@@ -20,6 +21,7 @@ export default function App() {
       >
         <Switch value={pressed} borderWidth={4} handlePadding={2} />
       </TouchableOpacity>
+      <StatusBar style={!pressed ? "light" : "dark"} />
     </View>
   );
 }
