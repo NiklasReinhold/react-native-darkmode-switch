@@ -1,7 +1,17 @@
 import React, { PropsWithChildren, useEffect, useRef } from "react";
-import { StyleSheet, Animated, View, Easing } from "react-native";
+import { StyleSheet, View, Easing } from "react-native";
 import Svg, { Circle, Path } from "react-native-svg";
 import { svgPathProperties } from "svg-path-properties";
+import Animated, {
+  Extrapolation,
+  interpolate,
+  interpolateColor,
+  useAnimatedProps,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from "react-native-reanimated";
 
 const Switch: React.FC<
   PropsWithChildren<{
@@ -10,7 +20,7 @@ const Switch: React.FC<
     borderWidth?: number;
   }>
 > = ({ value, handlePadding = 2, borderWidth = 4 }) => {
-  const animation = useRef(new Animated.Value(value ? 1 : 0)).current;
+  const animation = useSharedValue(value ? 1 : 0);
 
   const AnimatedPath = Animated.createAnimatedComponent(Path);
   const AnimatedSvg = Animated.createAnimatedComponent(Svg);
@@ -24,11 +34,9 @@ const Switch: React.FC<
   const handleDiameter = dimensions.height - (borderWidth + handlePadding) * 2;
 
   useEffect(() => {
-    Animated.timing(animation, {
-      toValue: value ? 1 : 0,
+    animation.value = withTiming(value ? 1 : 0, {
       duration: 1000,
-      useNativeDriver: true,
-    }).start();
+    });
   }, [value]);
 
   // The background and the border animation
@@ -40,16 +48,32 @@ const Switch: React.FC<
       borderWidth
     );
 
+    const animatedProps = useAnimatedProps(() => {
+        return {
+          fill: interpolateColor(
+            animation.value,
+            [0, 1],
+            ["#3d4147", "#82cbff"]
+          ),
+        };
+      }),
+      animatedProps2 = useAnimatedProps(() => {
+        return {
+          strokeDashoffset: interpolate(
+            animation.value,
+            [0, 1],
+            value ? [pathLength, 0] : [0, pathLength]
+          ),
+        };
+      });
+
     return (
       <Svg viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}>
         <AnimatedPath
           strokeWidth={borderWidth}
           stroke={!value ? "#4ab4ff" : "#000"}
-          fill={animation.interpolate({
-            inputRange: [0, 1],
-            outputRange: ["#3d4147", "#82cbff"],
-          })}
           d={path}
+          animatedProps={animatedProps}
         />
         <AnimatedPath
           strokeWidth={borderWidth}
@@ -57,10 +81,7 @@ const Switch: React.FC<
           fill="transparent"
           d={path}
           strokeDasharray={[pathLength]}
-          strokeDashoffset={animation.interpolate({
-            inputRange: [0, 1],
-            outputRange: value ? [pathLength, 0] : [0, pathLength],
-          })}
+          animatedProps={animatedProps2}
         />
       </Svg>
     );
@@ -68,16 +89,19 @@ const Switch: React.FC<
 
   // The stars at night
   const stars = () => {
+    const animatedProps = useAnimatedProps(() => {
+      return {
+        opacity: value
+          ? interpolate(animation.value, [0, 0.4, 0.5], [1, 1, 0])
+          : interpolate(animation.value, [0, 1], [1, 0]),
+      };
+    });
+
     return (
       <AnimatedSvg
-        style={{
-          position: "absolute",
-          opacity: animation.interpolate({
-            inputRange: value ? [0, 0.4, 0.5] : [0, 0.75, 1],
-            outputRange: value ? [1, 1, 0] : [1, 0, 0],
-          }),
-        }}
+        style={styles.absolute}
         viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
+        animatedProps={animatedProps}
       >
         <Circle cx="80%" cy="13%" r="3%" fill="white" />
         <Circle cx="84%" cy="73%" r="3%" fill="white" />
@@ -125,50 +149,56 @@ const Switch: React.FC<
   // The moving handle of the switch
   // Transform animation, change of width animation and color change
   const handle = () => {
-    return (
-      <Animated.View
-        style={[
+    const animatedStyle = useAnimatedStyle(() => {
+      return {
+        backgroundColor: value ? "#ff9f0f" : "#ffff80",
+        width: interpolate(
+          animation.value,
+          [0, 0.5, 1],
+          [handleDiameter, handleDiameter * 1.5, handleDiameter]
+        ),
+        transform: [
           {
-            position: "absolute",
-            height: handleDiameter,
-            width: animation.interpolate({
-              inputRange: [0, 0.5, 1],
-              outputRange: [
-                handleDiameter,
-                handleDiameter * 1.5,
-                handleDiameter * 1,
-              ],
-            }),
-            borderRadius: handleDiameter / 2,
-            margin: borderWidth + handlePadding,
-            transform: [
-              {
-                translateX: animation.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [
-                    0,
-                    dimensions.width -
-                      handleDiameter -
-                      borderWidth * 2 -
-                      handlePadding * 2,
-                  ],
-                }),
-              },
-            ],
-            backgroundColor: value ? "#ff9f0f" : "#ffff80",
+            translateX: interpolate(
+              animation.value,
+              [0, 1],
+              [
+                0,
+                dimensions.width -
+                  handleDiameter -
+                  borderWidth * 2 -
+                  handlePadding * 2,
+              ]
+            ),
           },
-        ]}
-      >
+        ],
+      };
+    });
+
+    const styles = StyleSheet.create({
+      handleOut: {
+        position: "absolute",
+        height: handleDiameter,
+        borderRadius: handleDiameter / 2,
+        margin: borderWidth + handlePadding,
+      },
+      handleIn: {
+        height: handleDiameter - borderWidth * 2,
+        width: handleDiameter - borderWidth * 2,
+        borderRadius: (handleDiameter - borderWidth * 2) / 2,
+        margin: borderWidth,
+      },
+    });
+
+    return (
+      <Animated.View style={[styles.handleOut, animatedStyle]}>
         <Animated.View
           style={[
             {
-              height: handleDiameter - borderWidth * 2,
-              width: handleDiameter - borderWidth * 2,
-              borderRadius: (handleDiameter - borderWidth * 2) / 2,
               alignSelf: value ? "flex-end" : "flex-start",
               backgroundColor: value ? "#ffbb54" : "#ffffde",
-              margin: borderWidth,
             },
+            styles.handleIn,
           ]}
         >
           {moon()}
@@ -188,41 +218,39 @@ const Switch: React.FC<
     const cloudStrokeWidth =
       (1096 / dimensions.height / cloudScale) * borderWidth;
 
+    const animatedStyle = useAnimatedStyle(() => {
+      return {
+        opacity: value
+          ? 1
+          : interpolate(animation.value, [0, 0.8, 1], [0, 0, 1]),
+        transform: [
+          {
+            scale: value
+              ? interpolate(animation.value, [0, 1], [0, 1])
+              : interpolate(animation.value, [0, 0.8, 1], [0, 0, 1]),
+          },
+        ],
+      };
+    });
+
+    const styles = StyleSheet.create({
+      cloud: {
+        position: "absolute",
+        bottom: borderWidth + handlePadding + borderWidth,
+        right: handleDiameter * 0.53 + handlePadding + borderWidth,
+        height: dimensions.height * cloudScale,
+        width:
+          dimensions.height * cloudScale * (cloudSvgWidth / cloudSvgHeight),
+      },
+      cloudSvg: {
+        transform: [{ scaleX: -1 }],
+      },
+    });
+
     return (
-      <Animated.View
-        style={{
-          position: "absolute",
-          bottom: borderWidth + handlePadding + borderWidth,
-          right: handleDiameter * 0.53 + handlePadding + borderWidth,
-          height: dimensions.height * cloudScale,
-          width:
-            dimensions.height * cloudScale * (cloudSvgWidth / cloudSvgHeight),
-          opacity: value
-            ? 1
-            : animation.interpolate({
-                inputRange: [0, 0.8, 1],
-                outputRange: [0, 0, 1],
-              }),
-          transform: [
-            {
-              scale: value
-                ? animation.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0, 1],
-                    easing: Easing.elastic(1.3),
-                  })
-                : animation.interpolate({
-                    inputRange: [0, 0.8, 1],
-                    outputRange: [0, 0, 1],
-                  }),
-            },
-          ],
-        }}
-      >
+      <Animated.View style={[styles.cloud, animatedStyle]}>
         <Svg
-          style={{
-            transform: [{ scaleX: -1 }],
-          }}
+          style={styles.cloudSvg}
           viewBox={`${-cloudStrokeWidth / 2} ${-cloudStrokeWidth / 2} ${
             cloudSvgWidth + cloudStrokeWidth
           } ${cloudSvgHeight + cloudStrokeWidth}`}
@@ -240,9 +268,7 @@ const Switch: React.FC<
 
   return (
     <View
-      style={{
-        flex: 1,
-      }}
+      style={styles.flex}
       onLayout={(event) => setDimensions(event.nativeEvent.layout)}
     >
       {background()}
@@ -275,6 +301,13 @@ const getBorderPath = (
   return [path, length];
 };
 
-const styles = StyleSheet.create({});
+const styles = StyleSheet.create({
+  absolute: {
+    position: "absolute",
+  },
+  flex: {
+    flex: 1,
+  },
+});
 
 export default Switch;
